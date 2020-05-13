@@ -2,10 +2,10 @@ import XCTest
 @testable import iOSDropbox
 
 final class iOSDropboxTests: XCTestCase {
-    func testExample() {
+    func testDropboxIcon() {
+        guard let _ = DropboxIcon()?.image else {
+            XCTFail()
+            return
+        }
     }
-
-    static var allTests = [
-        ("testExample", testExample),
-    ]
 }
