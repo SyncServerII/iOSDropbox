@@ -14,103 +14,6 @@ import iOSSignIn
 import ServerShared
 import iOSShared
 
-// Purely for saving creds into NSUserDefaults
-// NSObject subclass needed for NSCoding to work.
-class DropboxSavedCreds : NSObject, NSCoding {
-    // From the Dropbox docs: `The associated user`
-    /* And at: https://www.dropbox.com/developers/documentation/http/documentation#users-get_account
-     `uid String Deprecated. The API v1 user/team identifier. Please use account_id instead, or if using the Dropbox Business API, team_id.`
-    */
-    var uid: String!
-    
-    var displayName:String!
-    var email:String!
-    
-    // This is what we're sending up the server. From the code docs from Dropbox: `The user's unique Dropbox ID.`
-    var accountId: String!
-    
-    // [1] Change to using PersistentValue .file to avoid issues with background launches.
-    static private var data = try! PersistentValue<Data>(name: "DropboxSavedCreds.data", storage: .file)
-
-    init(uid:String, accountId:String, displayName:String, email:String) {
-        self.uid = uid
-        self.accountId = accountId
-        self.displayName = displayName
-        self.email = email
-    }
-    
-    func encode(with aCoder: NSCoder) {
-        aCoder.encode(uid, forKey: "uid")
-        aCoder.encode(accountId, forKey: "accountId")
-        aCoder.encode(displayName, forKey: "displayName")
-        aCoder.encode(email, forKey: "email")
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        uid = (aDecoder.decodeObject(forKey: "uid") as! String)
-        accountId = (aDecoder.decodeObject(forKey: "accountId") as! String)
-        displayName = (aDecoder.decodeObject(forKey: "displayName") as! String)
-        email = (aDecoder.decodeObject(forKey: "email") as! String)
-    }
-    
-    func save() throws {
-        let data = try NSKeyedArchiver.archivedData(withRootObject: self, requiringSecureCoding: false)
-        DropboxSavedCreds.data.value = data
-    }
-    
-    static func retrieve() throws -> DropboxSavedCreds? {
-        guard let data = DropboxSavedCreds.data.value else {
-            return nil
-        }
-                
-        if let object = try NSKeyedUnarchiver.unarchivedObject(ofClass: DropboxSavedCreds.self, from: data) {
-            return object
-        }
-        else {
-            return nil
-        }
-    }
-}
-
-public class DropboxCredentials : GenericCredentials {
-    var savedCreds:DropboxSavedCreds!
-    var accessToken:String!
-    
-    init(savedCreds:DropboxSavedCreds, accessToken:String) {
-        self.savedCreds = savedCreds
-        self.accessToken = accessToken
-    }
-    
-    /// A unique identifier for the user. E.g., for Google this is their `sub`.
-    public var userId:String {
-        return savedCreds.uid
-    }
-
-    /// This is sent to the server as a human-readable means to identify the user.
-    public var username:String? {
-        return savedCreds.displayName
-    }
-
-    /// A name suitable for identifying the user via the UI. If available this should be the users email. Otherwise, it could be the same as the username.
-    public var uiDisplayName:String? {
-        return savedCreds.email
-    }
-
-    public var httpRequestHeaders:[String:String] {
-        var result = [String:String]()
-        result[ServerConstants.XTokenTypeKey] = AuthTokenType.DropboxToken.rawValue
-        result[ServerConstants.HTTPOAuth2AccessTokenKey] = accessToken
-        result[ServerConstants.HTTPAccountIdKey] = savedCreds.accountId
-        return result
-    }
-
-    /// Dropbox doesn't have a creds refresh.
-    public func refreshCredentials(completion: @escaping (Error?) ->()) {
-        // Dropbox access tokens live until the user revokes them, so no need to refresh. See https://www.dropboxforum.com/t5/API-support/API-v2-access-token-validity/td-p/215123
-        completion(GenericCredentialsError.noRefreshAvailable)
-    }
-}
-
 public class DropboxSyncServerSignIn : GenericSignIn {
     public var signInName = "Dropbox"
     
@@ -172,7 +75,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
     }
     
     private func autoSignIn() {
-        // self.completeSignInProcess(autoSignIn: true)
+        self.completeSignInProcess(autoSignIn: true)
     }
     
     public func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
@@ -218,7 +121,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
                     let savedCreds = DropboxSavedCreds(uid: self.dropboxAccessToken!.uid,
                         accountId: usersFullAccount.accountId, displayName: usersFullAccount.name.displayName, email: usersFullAccount.email)
                     try? savedCreds.save()
-                    //self.completeSignInProcess(autoSignIn: false)
+                    self.completeSignInProcess(autoSignIn: false)
                 } else {
                     // This stemmed from an explicit sign-in request.
                     self.signUserOut()
@@ -228,15 +131,11 @@ public class DropboxSyncServerSignIn : GenericSignIn {
         }
     }
     
-    /// The parameter must be given with key "viewController" and value, a `UIViewController` conforming object.
+    /// If the parameter is be given, it needs to have a key "viewController" and value, a `UIViewController` conforming object. If this is not given, the top-appearing view controller will be used later by iOSDropbox, if one is present. A view controller is used for at least presenting error messages.
     @discardableResult
     public func signInButton(configuration:[String:Any]?) -> UIView? {
         if signInOutButton == nil {
-            guard let vc = configuration?["viewController"] as? UIViewController else {
-                logger.error("You must give a UIViewController conforming object with key `viewController`")
-                return nil
-            }
-            
+            let vc = configuration?["viewController"] as? UIViewController
             signInOutButton = DropboxSignInButton(vc: vc, signIn: self)
         }
         
@@ -267,6 +166,12 @@ public class DropboxSyncServerSignIn : GenericSignIn {
         signInOutButton?.buttonShowing = .signIn
         
         delegate?.userIsSignedOut(self)
+    }
+    
+    fileprivate func completeSignInProcess(autoSignIn:Bool) {
+        signInOutButton?.buttonShowing = .signOut
+        stickySignIn = true
+        delegate?.signInCompleted(self, autoSignIn: autoSignIn)
     }
     
     /*
@@ -364,7 +269,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
 }
 
 private class DropboxSignInButton : UIView {
-    weak var vc: UIViewController!
+    weak var vc: UIViewController?
     weak var signIn: DropboxSyncServerSignIn!
 
     // Spans the entire UIView
@@ -403,9 +308,9 @@ private class DropboxSignInButton : UIView {
             return super.frame
         }
     }
-    
+        
     // Keeps only weak references to these parameters. You need to set the size of this button.
-    init(vc: UIViewController, signIn: DropboxSyncServerSignIn) {
+    init(vc: UIViewController?, signIn: DropboxSyncServerSignIn) {
         super.init(frame: CGRect.zero)
         self.vc = vc
         self.signIn = signIn
@@ -415,6 +320,9 @@ private class DropboxSignInButton : UIView {
 
         dropboxIconView = UIImageView(image: DropboxIcon()?.image)
         dropboxIconView.contentMode = .scaleAspectFit
+        
+        // When I can use a better graphic asset, should be able to remove this.
+        dropboxIconView.frame.size = CGSize(width: 30, height: 30)
         
         label.font = UIFont.boldSystemFont(ofSize: 14.0)
         
@@ -437,9 +345,17 @@ private class DropboxSignInButton : UIView {
         switch buttonShowing {
         case .signIn:
             signIn.delegate?.signInStarted(signIn)
+            
+            var controller:UIViewController?
+            if let vc = vc {
+                controller = vc
+            }
+            else {
+                controller = UIViewController.getTop()
+            }
         
             DropboxClientsManager.authorizeFromController(UIApplication.shared,
-                controller: vc, openURL: { url in
+                controller: controller, openURL: { url in
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
             })
         case .signOut:
