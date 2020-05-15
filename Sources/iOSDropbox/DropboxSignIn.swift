@@ -96,7 +96,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
                 
             case .cancel:
                 logger.info("Authorization flow was manually canceled by user!")
-                signUserOut()
+                signUserOut(cancelOnly: true)
                 
             case .error(let oauth2Error, let description):
                 logger.error("Error: \(description); oauth2Error: \(oauth2Error)")
@@ -156,6 +156,10 @@ public class DropboxSyncServerSignIn : GenericSignIn {
     }
 
     public func signUserOut() {
+        signUserOut(cancelOnly: false)
+    }
+    
+    private func signUserOut(cancelOnly: Bool) {
         stickySignIn = false
         
         // I don't think this actually revokes the access token. Just clears it locally. Yes. Looking at their code, it just clears the keychain.
@@ -165,7 +169,12 @@ public class DropboxSyncServerSignIn : GenericSignIn {
         
         signInOutButton?.buttonShowing = .signIn
         
-        delegate?.userIsSignedOut(self)
+        if cancelOnly {
+            delegate?.signInCancelled(self)
+        }
+        else {
+            delegate?.userIsSignedOut(self)
+        }
     }
     
     fileprivate func completeSignInProcess(autoSignIn:Bool) {
@@ -373,10 +382,10 @@ private class DropboxSignInButton : UIView {
             logger.info("Change sign-in state: \(buttonShowing)")
             switch buttonShowing {
             case .signIn:
-                label.text = "Sign In"
+                label.text = "Sign-In with Dropbox"
 
             case .signOut:
-                label.text = "Sign Out"
+                label.text = "Sign-Out from Dropbox"
             }
 
             layout()
