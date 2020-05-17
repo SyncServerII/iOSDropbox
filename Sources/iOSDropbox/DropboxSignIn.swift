@@ -23,28 +23,33 @@ public class DropboxSyncServerSignIn : GenericSignIn {
     public var delegate:GenericSignInDelegate?
     private var signInOutButton:DropboxSignInButton?
     
-    static let accessToken = try! PersistentValue<String>(name: "DropboxSignIn.accessToken2", storage: .keyChain)
-    var accessToken:String? {
-        set {
-            if newValue == nil || newValue == "" {
-                DropboxSyncServerSignIn.accessToken.value = ""
-            }
-            else {
-                DropboxSyncServerSignIn.accessToken.value = newValue!
-            }
-        }
-        get {
-            if DropboxSyncServerSignIn.accessToken.value == nil {
-                return nil
-            }
-            else {
-                return DropboxSyncServerSignIn.accessToken.value
-            }
-        }
-    }
+    static private let credentialsData = try! PersistentValue<Data>(name: "DropboxSignIn.data", storage: .keyChain)
     
     public init(appKey: String) {
         DropboxClientsManager.setupWithAppKey(appKey)
+    }
+    
+    private var savedCreds:DropboxSavedCreds? {
+        set {
+            Self.credentialsData.value = try? newValue?.toData()
+        }
+        
+        get {
+            guard let data = Self.credentialsData.value,
+                let savedCreds = try? DropboxSavedCreds.fromData(data) else {
+                return nil
+            }
+            return savedCreds
+        }
+    }
+    
+    public var credentials:GenericCredentials? {
+        if let savedCreds = savedCreds {
+            return DropboxCredentials(savedCreds: savedCreds)
+        }
+        else {
+            return nil
+        }
     }
     
     public let userType:UserType = .owning
@@ -89,10 +94,8 @@ public class DropboxSyncServerSignIn : GenericSignIn {
 
                 self.dropboxAccessToken = dropboxAccessToken
                 
-                // It seems we have to save the access token in the keychain, redundantly with Dropbox. I can't see a way to access it.
-                accessToken = dropboxAccessToken.accessToken
-                
-                getCurrentAccountInfo()
+                // It seems we have to save the access token in the keychain, redundantly with Dropbox. I can't see a way to access it.                
+                getCurrentAccountInfo(accessToken: dropboxAccessToken.accessToken)
                 
             case .cancel:
                 logger.info("Authorization flow was manually canceled by user!")
@@ -109,7 +112,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
         return false
     }
 
-    private func getCurrentAccountInfo() {
+    private func getCurrentAccountInfo(accessToken: String) {
         if let client = DropboxClientsManager.authorizedClient {
             client.users.getCurrentAccount().response {[unowned self] (response: Users.FullAccount?, error) in
                 
@@ -118,9 +121,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
                 // NOTE: This ^^^^ is *not* the same as the uid obtained when first signed in.
                 
                 if let usersFullAccount = response, error == nil {
-                    let savedCreds = DropboxSavedCreds(uid: self.dropboxAccessToken!.uid,
-                        accountId: usersFullAccount.accountId, displayName: usersFullAccount.name.displayName, email: usersFullAccount.email)
-                    try? savedCreds.save()
+                    self.savedCreds = DropboxSavedCreds(userId: usersFullAccount.accountId, username: usersFullAccount.name.displayName, uiDisplayName: usersFullAccount.name.displayName, email: usersFullAccount.email, accessToken: accessToken)
                     self.completeSignInProcess(autoSignIn: false)
                 } else {
                     // This stemmed from an explicit sign-in request.
@@ -146,15 +147,6 @@ public class DropboxSyncServerSignIn : GenericSignIn {
         return stickySignIn
     }
 
-    public var credentials:GenericCredentials? {
-        guard let savedCreds = try? DropboxSavedCreds.retrieve(), let accessToken = accessToken else {
-            return nil
-        }
-        
-        let creds = DropboxCredentials(savedCreds: savedCreds, accessToken: accessToken)
-        return creds
-    }
-
     public func signUserOut() {
         signUserOut(cancelOnly: false)
     }
@@ -165,7 +157,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
         // I don't think this actually revokes the access token. Just clears it locally. Yes. Looking at their code, it just clears the keychain.
         DropboxClientsManager.unlinkClients()
         
-        accessToken = nil
+        savedCreds = nil
         
         signInOutButton?.buttonShowing = .signIn
         
@@ -183,6 +175,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
         delegate?.signInCompleted(self, autoSignIn: autoSignIn)
     }
 }
+
 
 private class DropboxSignInButton : UIView {
     weak var vc: UIViewController?

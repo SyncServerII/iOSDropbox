@@ -4,21 +4,22 @@ import ServerShared
 
 public class DropboxCredentials : GenericCredentials {
     var savedCreds:DropboxSavedCreds!
-    var accessToken:String!
-    
-    init(savedCreds:DropboxSavedCreds, accessToken:String) {
-        self.savedCreds = savedCreds
-        self.accessToken = accessToken
+    var accessToken:String! {
+        return savedCreds.accessToken
     }
     
-    /// A unique identifier for the user. E.g., for Google this is their `sub`.
+    init(savedCreds:DropboxSavedCreds) {
+        self.savedCreds = savedCreds
+    }
+    
+    /// A unique identifier for the user. For Dropbox this is their account_id.
     public var userId:String {
-        return savedCreds.uid
+        return savedCreds.userId
     }
 
     /// This is sent to the server as a human-readable means to identify the user.
     public var username:String? {
-        return savedCreds.displayName
+        return savedCreds.username
     }
 
     /// A name suitable for identifying the user via the UI. If available this should be the users email. Otherwise, it could be the same as the username.
@@ -30,7 +31,7 @@ public class DropboxCredentials : GenericCredentials {
         var result = [String:String]()
         result[ServerConstants.XTokenTypeKey] = AuthTokenType.DropboxToken.rawValue
         result[ServerConstants.HTTPOAuth2AccessTokenKey] = accessToken
-        result[ServerConstants.HTTPAccountIdKey] = savedCreds.accountId
+        result[ServerConstants.HTTPAccountIdKey] = savedCreds.userId
         return result
     }
 
