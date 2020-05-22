@@ -2,7 +2,7 @@ import Foundation
 import iOSSignIn
 import ServerShared
 
-public class DropboxCredentials : GenericCredentials {
+public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertible {
     var savedCreds:DropboxSavedCreds!
     var accessToken:String! {
         return savedCreds.accessToken
@@ -25,6 +25,10 @@ public class DropboxCredentials : GenericCredentials {
     /// A name suitable for identifying the user via the UI. If available this should be the users email. Otherwise, it could be the same as the username.
     public var uiDisplayName:String? {
         return savedCreds.email
+    }
+    
+    public var debugDescription: String {
+        return "Dropbox: accessToken: \(String(describing: accessToken)); userId: \(userId)"
     }
 
     public var httpRequestHeaders:[String:String] {
