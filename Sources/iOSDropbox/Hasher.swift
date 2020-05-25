@@ -1,5 +1,6 @@
 import iOSShared
 import Foundation
+import ServerShared
 
 // CommonCrypto is only available with Xcode 10 for import into Swift; see also https://stackoverflow.com/questions/25248598/importing-commoncrypto-in-a-swift-framework
 import CommonCrypto
@@ -10,7 +11,7 @@ public struct DropboxHashing: CloudStorageHashing {
         case lengthBoundsProblem
     }
     
-    public var accountName = "Dropbox"
+    public var cloudStorageType: CloudStorageType = .Dropbox
     
     public init() {
     }
