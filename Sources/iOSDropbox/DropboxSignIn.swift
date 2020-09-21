@@ -121,7 +121,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
                 // NOTE: This ^^^^ is *not* the same as the uid obtained when first signed in.
                 
                 if let usersFullAccount = response, error == nil {
-                    self.savedCreds = DropboxSavedCreds(userId: usersFullAccount.accountId, username: usersFullAccount.name.displayName, uiDisplayName: usersFullAccount.name.displayName, email: usersFullAccount.email, accessToken: accessToken)
+                    self.savedCreds = DropboxSavedCreds(cloudStorageType: .Dropbox, userId: usersFullAccount.accountId, username: usersFullAccount.name.displayName, uiDisplayName: usersFullAccount.name.displayName, email: usersFullAccount.email, accessToken: accessToken)
                     self.completeSignInProcess(autoSignIn: false)
                 } else {
                     // This stemmed from an explicit sign-in request.

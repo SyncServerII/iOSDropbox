@@ -1,8 +1,11 @@
 import PersistentValue
 import Foundation
 import iOSSignIn
+import ServerShared
 
 class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
+    let cloudStorageType: CloudStorageType?
+    
     let userId: String // account_id in Dropbox terms
     
     var username: String?
@@ -13,12 +16,13 @@ class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
     
     var accessToken: String
     
-    init(userId: String, username: String?, uiDisplayName: String?, email:String, accessToken: String) {
+    init(cloudStorageType: CloudStorageType, userId: String, username: String?, uiDisplayName: String?, email:String, accessToken: String) {
         self.userId = userId
         self.username = username
         self.uiDisplayName = uiDisplayName
         self.email = email
         self.accessToken = accessToken
+        self.cloudStorageType = cloudStorageType
     }
     
     // [1] Change to using PersistentValue .file to avoid issues with background launches.
