@@ -12,7 +12,8 @@ public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertib
         return savedCreds.accessToken
     }
     
-    init(savedCreds:DropboxSavedCreds) {
+    // Helper
+    public init(savedCreds:DropboxSavedCreds) {
         self.savedCreds = savedCreds
     }
     
