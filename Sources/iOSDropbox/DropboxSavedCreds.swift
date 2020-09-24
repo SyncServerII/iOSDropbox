@@ -3,20 +3,21 @@ import Foundation
 import iOSSignIn
 import ServerShared
 
-class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
-    let cloudStorageType: CloudStorageType?
+// Helper class
+public class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
+    public let cloudStorageType: CloudStorageType?
     
-    let userId: String // account_id in Dropbox terms
+    public let userId: String // account_id in Dropbox terms
     
-    var username: String?
+    public var username: String?
     
-    var uiDisplayName: String?
+    public var uiDisplayName: String?
     
-    let email:String
+    public let email:String
     
-    var accessToken: String
+    public var accessToken: String
     
-    init(cloudStorageType: CloudStorageType, userId: String, username: String?, uiDisplayName: String?, email:String, accessToken: String) {
+    public init(cloudStorageType: CloudStorageType, userId: String, username: String?, uiDisplayName: String?, email:String, accessToken: String) {
         self.userId = userId
         self.username = username
         self.uiDisplayName = uiDisplayName
@@ -28,7 +29,7 @@ class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
     // [1] Change to using PersistentValue .file to avoid issues with background launches.
     //static private var data = try! PersistentValue<Data>(name: "DropboxSavedCreds.data", storage: .file)
     
-    static func == (lhs: DropboxSavedCreds, rhs: DropboxSavedCreds) -> Bool {
+    public static func == (lhs: DropboxSavedCreds, rhs: DropboxSavedCreds) -> Bool {
         return lhs.userId == rhs.userId &&
             lhs.username == rhs.username &&
             lhs.uiDisplayName == rhs.uiDisplayName &&
