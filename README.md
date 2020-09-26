@@ -23,7 +23,7 @@ Part of what you get here is a  DropboxAppKey
     </array>
 ```
 
-3) Into your Info.plist for your app, add:
+3) Into your Info.plist for your app, also add:
 
 ```
 <key>LSApplicationQueriesSchemes</key>
