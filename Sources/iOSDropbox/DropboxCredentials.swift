@@ -3,10 +3,6 @@ import iOSSignIn
 import ServerShared
 
 public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertible {
-    public var cloudStorageType: CloudStorageType?  {
-        return .Dropbox
-    }
-    
     var savedCreds:DropboxSavedCreds!
     var accessToken:String! {
         return savedCreds.accessToken
