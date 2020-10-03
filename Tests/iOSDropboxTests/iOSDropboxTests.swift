@@ -2,8 +2,15 @@ import XCTest
 @testable import iOSDropbox
 
 class iOSDropboxTests: XCTestCase {
-    func testDropboxIcon() {
-        guard let _ = DropboxIcon()?.image else {
+    func testDropboxIconURL() {
+        guard let _ = DropboxIcon.fileURL else {
+            XCTFail()
+            return
+        }
+    }
+    
+    func testDropboxIconImage() {
+        guard let _ = DropboxIcon.image else {
             XCTFail()
             return
         }

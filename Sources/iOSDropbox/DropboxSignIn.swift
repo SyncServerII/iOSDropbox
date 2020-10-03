@@ -137,7 +137,13 @@ public class DropboxSyncServerSignIn : GenericSignIn {
     public func signInButton(configuration:[String:Any]?) -> UIView? {
         if signInOutButton == nil {
             let vc = configuration?["viewController"] as? UIViewController
-            signInOutButton = DropboxSignInButton(vc: vc, signIn: self)
+            
+            do {
+                signInOutButton = try DropboxSignInButton(vc: vc, signIn: self)
+            } catch let error {
+                logger.error("\(error)")
+                return nil
+            }
         }
         
         return signInOutButton
@@ -217,17 +223,25 @@ private class DropboxSignInButton : UIView {
             return super.frame
         }
     }
-        
+    
+    enum DropboxSignInButtonError: Error {
+        case couldNotGetImage
+    }
+    
     // Keeps only weak references to these parameters. You need to set the size of this button.
-    init(vc: UIViewController?, signIn: DropboxSyncServerSignIn) {
+    init(vc: UIViewController?, signIn: DropboxSyncServerSignIn) throws {
         super.init(frame: CGRect.zero)
         self.vc = vc
         self.signIn = signIn
         
-        button.backgroundColor = .white
+        button.backgroundColor = .clear
         addSubview(button)
+        
+        guard let iconImage = DropboxIcon.image else {
+            throw DropboxSignInButtonError.couldNotGetImage
+        }
 
-        dropboxIconView = UIImageView(image: DropboxIcon()?.image)
+        dropboxIconView = UIImageView(image: iconImage)
         dropboxIconView.contentMode = .scaleAspectFit
         
         // When I can use a better graphic asset, should be able to remove this.
