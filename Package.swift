@@ -32,6 +32,11 @@ let package = Package(
         ),
         .testTarget(
             name: "iOSDropboxTests",
-            dependencies: ["iOSDropbox"]),
+            dependencies: ["iOSDropbox"],
+            resources: [
+                .copy("Cat.jpg"),
+                .copy("Cat.mov")
+            ]
+        ),
     ]
 )
