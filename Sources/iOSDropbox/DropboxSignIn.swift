@@ -296,6 +296,7 @@ private class DropboxSignInButton : UIView {
             logger.info("Change sign-in state: \(buttonShowing)")
             switch buttonShowing {
             case .signIn:
+                #warning("Publishing changes from background threads is not allowed; make sure to publish values from the main thread (via operators like receive(on:)) on model updates.")
                 label.text = "Sign-In with Dropbox"
 
             case .signOut:
