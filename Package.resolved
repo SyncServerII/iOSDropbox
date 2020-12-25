@@ -75,11 +75,11 @@
       },
       {
         "package": "SwiftyDropbox",
-        "repositoryURL": "https://github.com/crspybits/SwiftyDropbox.git",
+        "repositoryURL": "https://github.com/dropbox/SwiftyDropbox.git",
         "state": {
-          "branch": "master",
-          "revision": "fbedfc164895e4bfece9bb8006e59f195978fe83",
-          "version": null
+          "branch": null,
+          "revision": "1a99f77ae123722322af455cb71a96e72eb153e1",
+          "version": "6.0.3"
         }
       },
       {

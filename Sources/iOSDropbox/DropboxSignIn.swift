@@ -84,32 +84,37 @@ public class DropboxSyncServerSignIn : GenericSignIn {
     }
     
     public func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-    
-        if let authResult = DropboxClientsManager.handleRedirectURL(url) {
-            switch authResult {
+
+        return DropboxClientsManager.handleRedirectURL(url) {[weak self] dropboxOAuthResult in
+            guard let self = self else { return }
+            guard let dropboxOAuthResult = dropboxOAuthResult else {
+                logger.error("Error: Nil dropboxOAuthResult")
+                self.signUserOut()
+                return
+            }
+            
+            switch dropboxOAuthResult {
             case .success(let dropboxAccessToken):
                 logger.info("Success! User is logged into Dropbox!")
                 logger.info("Dropbox: access token: \(dropboxAccessToken.accessToken)")
                 logger.info("Dropbox: uid: \(dropboxAccessToken.uid)")
-
+                logger.info("Dropbox: refresh token: \(String(describing: dropboxAccessToken.refreshToken))")
+                
                 self.dropboxAccessToken = dropboxAccessToken
                 
-                // It seems we have to save the access token in the keychain, redundantly with Dropbox. I can't see a way to access it.                
-                getCurrentAccountInfo(accessToken: dropboxAccessToken.accessToken)
+                // It seems we have to save the access token in the keychain, redundantly with Dropbox. I can't see a way to access it.
+                self.getCurrentAccountInfo(accessToken: dropboxAccessToken.accessToken)
                 
             case .cancel:
                 logger.info("Authorization flow was manually canceled by user!")
-                signUserOut(cancelOnly: true)
+                self.signUserOut(cancelOnly: true)
                 
             case .error(let oauth2Error, let description):
-                logger.error("Error: \(description); oauth2Error: \(oauth2Error)")
+                logger.error("Error: \(String(describing: description)); oauth2Error: \(oauth2Error)")
                 // This stemmed from an explicit sign-in request. It didn't complete successfully. Seems ok to sign out.
-                signUserOut()
+                self.signUserOut()
             }
-            return true
         }
-
-        return false
     }
 
     private func getCurrentAccountInfo(accessToken: String) {
@@ -140,6 +145,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
             
             do {
                 signInOutButton = try DropboxSignInButton(vc: vc, signIn: self)
+                signInOutButton?.delegate = self
             } catch let error {
                 logger.error("\(error)")
                 return nil
@@ -182,129 +188,41 @@ public class DropboxSyncServerSignIn : GenericSignIn {
     }
 }
 
+extension DropboxSyncServerSignIn: DropboxButtonDelegate {
+    func signIn(_ button: DropboxSignInButton, vc: UIViewController?) {
+        delegate?.signInStarted(self)
 
-private class DropboxSignInButton : UIView {
-    weak var vc: UIViewController?
-    weak var signIn: DropboxSyncServerSignIn!
-
-    // Spans the entire UIView
-    var button = UIButton(type: .system)
-    
-    var dropboxIconView:UIImageView!
-    let label = UILabel()
-    
-    // 12/27/17; I was having problems getting this to be called at the right time (it was just in `layoutSubviews` at the time), so I separated it out into its own function.
-    private func layout() {
-        button.frame.size = frame.size
+        // New: OAuth 2 code flow with PKCE that grants a short-lived token with scopes.
         
-        if let dropboxIconView = dropboxIconView {
-            dropboxIconView.frame.origin.x = 5
-            dropboxIconView.centerVerticallyInSuperview()
-            
-            label.sizeToFit()
-            let remainingWidth = frame.width - dropboxIconView.frame.maxX
-            label.center.x = dropboxIconView.frame.maxX + remainingWidth/2.0
-            label.centerVerticallyInSuperview()
+        // See https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens
+        let scopes:[String] = [
+            "account_info.read",
+            "files.metadata.read",
+            "files.content.read",
+            "files.content.write"
+        ]
+        
+        var controller:UIViewController?
+        if let vc = vc {
+            controller = vc
         }
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        layout()
-    }
-    
-    override var frame: CGRect {
-        set {
-            super.frame = newValue
-            layout()
+        else {
+            controller = UIViewController.getTop()
         }
         
-        get {
-            return super.frame
-        }
-    }
-    
-    enum DropboxSignInButtonError: Error {
-        case couldNotGetImage
-    }
-    
-    // Keeps only weak references to these parameters. You need to set the size of this button.
-    init(vc: UIViewController?, signIn: DropboxSyncServerSignIn) throws {
-        super.init(frame: CGRect.zero)
-        self.vc = vc
-        self.signIn = signIn
-        
-        button.backgroundColor = .clear
-        addSubview(button)
-        
-        guard let iconImage = DropboxIcon.image else {
-            throw DropboxSignInButtonError.couldNotGetImage
-        }
-
-        dropboxIconView = UIImageView(image: iconImage)
-        dropboxIconView.contentMode = .scaleAspectFit
-        
-        // When I can use a better graphic asset, should be able to remove this.
-        dropboxIconView.frame.size = CGSize(width: 30, height: 30)
-        
-        label.font = UIFont.boldSystemFont(ofSize: 14.0)
-        
-        button.addSubview(dropboxIconView)
-        button.addSubview(label)
-        button.addTarget(self, action: #selector(tap), for: .touchUpInside)
-        
-        // Otherwise, `didSet` doesn't get called in init methods. Odd.
-        defer {
-            // Can't just statically set this-- need to depend on sign-in state. Because on an autosign-in, the button gets allocated late in the process.
-            buttonShowing = signIn.userIsSignedIn ? .signOut : .signIn
-        }
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    @objc func tap() {
-        switch buttonShowing {
-        case .signIn:
-            signIn.delegate?.signInStarted(signIn)
-            
-            var controller:UIViewController?
-            if let vc = vc {
-                controller = vc
-            }
-            else {
-                controller = UIViewController.getTop()
-            }
-        
-            DropboxClientsManager.authorizeFromController(UIApplication.shared,
-                controller: controller, openURL: { url in
+        let scopeRequest = ScopeRequest(scopeType: .user, scopes: scopes, includeGrantedScopes: false)
+        DropboxClientsManager.authorizeFromControllerV2(
+            UIApplication.shared,
+            controller: controller,
+            loadingStatusDelegate: nil,
+            openURL: { url in
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
-            })
-        case .signOut:
-            signIn.signUserOut()
-        }
+            },
+            scopeRequest: scopeRequest
+        )
     }
     
-    enum State {
-        case signIn
-        case signOut
-    }
-    
-    var buttonShowing:State = .signIn {
-        didSet {
-            logger.info("Change sign-in state: \(buttonShowing)")
-            switch buttonShowing {
-            case .signIn:
-                #warning("Publishing changes from background threads is not allowed; make sure to publish values from the main thread (via operators like receive(on:)) on model updates.")
-                label.text = "Sign-In with Dropbox"
-
-            case .signOut:
-                label.text = "Sign-Out from Dropbox"
-            }
-
-            layout()
-        }
+    func signOut(_ button: DropboxSignInButton) {
+        signUserOut()
     }
 }
-

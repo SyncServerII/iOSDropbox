@@ -18,7 +18,7 @@ let package = Package(
         .package(url: "https://github.com/SyncServerII/iOSSignIn.git", .branch("master")),
         .package(url: "https://github.com/SyncServerII/ServerShared.git", .branch("master")),
         .package(url: "https://github.com/SyncServerII/iOSShared.git", .branch("master")),
-        .package(url: "https://github.com/crspybits/SwiftyDropbox.git", .branch("master")),
+        .package(url: "https://github.com/dropbox/SwiftyDropbox.git", from: "6.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
