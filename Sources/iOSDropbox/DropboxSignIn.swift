@@ -164,27 +164,31 @@ public class DropboxSyncServerSignIn : GenericSignIn {
     }
     
     private func signUserOut(cancelOnly: Bool) {
-        stickySignIn = false
-        
-        // I don't think this actually revokes the access token. Just clears it locally. Yes. Looking at their code, it just clears the keychain.
-        DropboxClientsManager.unlinkClients()
-        
-        savedCreds = nil
-        
-        signInOutButton?.buttonShowing = .signIn
-        
-        if cancelOnly {
-            delegate?.signInCancelled(self)
-        }
-        else {
-            delegate?.userIsSignedOut(self)
+        DispatchQueue.main.async {
+            self.stickySignIn = false
+            
+            // I don't think this actually revokes the access token. Just clears it locally. Yes. Looking at their code, it just clears the keychain.
+            DropboxClientsManager.unlinkClients()
+            
+            self.savedCreds = nil
+            
+            self.signInOutButton?.buttonShowing = .signIn
+            
+            if cancelOnly {
+                self.delegate?.signInCancelled(self)
+            }
+            else {
+                self.delegate?.userIsSignedOut(self)
+            }
         }
     }
     
     fileprivate func completeSignInProcess(autoSignIn:Bool) {
-        signInOutButton?.buttonShowing = .signOut
-        stickySignIn = true
-        delegate?.signInCompleted(self, autoSignIn: autoSignIn)
+        DispatchQueue.main.async {
+            self.signInOutButton?.buttonShowing = .signOut
+            self.stickySignIn = true
+            self.delegate?.signInCompleted(self, autoSignIn: autoSignIn)
+        }
     }
 }
 

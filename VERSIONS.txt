@@ -1,0 +1,4 @@
+iOSDropbox
+	
+Version 0.0.1 (12/24/20)
+	Have migrated to the short-lived access tokens with refresh tokens.
