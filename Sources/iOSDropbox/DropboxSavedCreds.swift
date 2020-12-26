@@ -17,12 +17,15 @@ public class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
     
     public var accessToken: String
     
-    public init(cloudStorageType: CloudStorageType, userId: String, username: String?, uiDisplayName: String?, email:String, accessToken: String) {
+    public var refreshToken: String
+    
+    public init(cloudStorageType: CloudStorageType, userId: String, username: String?, uiDisplayName: String?, email:String, accessToken: String, refreshToken: String) {
         self.userId = userId
         self.username = username
         self.uiDisplayName = uiDisplayName
         self.email = email
         self.accessToken = accessToken
+        self.refreshToken = refreshToken
         self.cloudStorageType = cloudStorageType
     }
     
@@ -34,6 +37,7 @@ public class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
             lhs.username == rhs.username &&
             lhs.uiDisplayName == rhs.uiDisplayName &&
             lhs.email == rhs.email &&
-            lhs.accessToken == rhs.accessToken
+            lhs.accessToken == rhs.accessToken &&
+            lhs.refreshToken == rhs.refreshToken
     }
 }

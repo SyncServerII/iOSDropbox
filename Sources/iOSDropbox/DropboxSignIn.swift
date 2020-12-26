@@ -102,8 +102,14 @@ public class DropboxSyncServerSignIn : GenericSignIn {
                 
                 self.dropboxAccessToken = dropboxAccessToken
                 
-                // It seems we have to save the access token in the keychain, redundantly with Dropbox. I can't see a way to access it.
-                self.getCurrentAccountInfo(accessToken: dropboxAccessToken.accessToken)
+                guard let refreshToken = dropboxAccessToken.refreshToken else {
+                    logger.info("Authorization flow: No refresh token obtained!")
+                    self.signUserOut(cancelOnly: false)
+                    return
+                }
+                
+                // It seems we have to save the access and refresh tokens in the keychain, redundantly with Dropbox. I can't see a way to access them.
+                self.getCurrentAccountInfo(accessToken: dropboxAccessToken.accessToken, refreshToken: refreshToken)
                 
             case .cancel:
                 logger.info("Authorization flow was manually canceled by user!")
@@ -117,7 +123,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
         }
     }
 
-    private func getCurrentAccountInfo(accessToken: String) {
+    private func getCurrentAccountInfo(accessToken: String, refreshToken: String) {
         if let client = DropboxClientsManager.authorizedClient {
             client.users.getCurrentAccount().response {[unowned self] (response: Users.FullAccount?, error) in
                 
@@ -126,7 +132,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
                 // NOTE: This ^^^^ is *not* the same as the uid obtained when first signed in.
                 
                 if let usersFullAccount = response, error == nil {
-                    self.savedCreds = DropboxSavedCreds(cloudStorageType: .Dropbox, userId: usersFullAccount.accountId, username: usersFullAccount.name.displayName, uiDisplayName: usersFullAccount.name.displayName, email: usersFullAccount.email, accessToken: accessToken)
+                    self.savedCreds = DropboxSavedCreds(cloudStorageType: .Dropbox, userId: usersFullAccount.accountId, username: usersFullAccount.name.displayName, uiDisplayName: usersFullAccount.name.displayName, email: usersFullAccount.email, accessToken: accessToken, refreshToken: refreshToken)
                     self.completeSignInProcess(autoSignIn: false)
                 } else {
                     // This stemmed from an explicit sign-in request.
@@ -203,7 +209,13 @@ extension DropboxSyncServerSignIn: DropboxButtonDelegate {
             "account_info.read",
             "files.metadata.read",
             "files.content.read",
-            "files.content.write"
+            "files.content.write",
+            
+            // Needed for endpoint on server: https://www.dropbox.com/developers/documentation/http/documentation#users-get_account
+            "sharing.read",
+            
+            // Needed for endpoint on server: https://www.dropbox.com/developers/documentation/http/documentation#file_requests-delete
+            "file_requests.write"
         ]
         
         var controller:UIViewController?

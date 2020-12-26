@@ -37,12 +37,14 @@ public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertib
         result[ServerConstants.XTokenTypeKey] = AuthTokenType.DropboxToken.rawValue
         result[ServerConstants.HTTPOAuth2AccessTokenKey] = accessToken
         result[ServerConstants.HTTPAccountIdKey] = savedCreds.userId
+        result[ServerConstants.httpRequestRefreshToken] = savedCreds.userId
         return result
     }
 
     /// Dropbox doesn't have a creds refresh.
     public func refreshCredentials(completion: @escaping (Error?) ->()) {
         // Dropbox access tokens live until the user revokes them, so no need to refresh. See https://www.dropboxforum.com/t5/API-support/API-v2-access-token-validity/td-p/215123
+        // 12/24/20; That's no longer true. But this method isn't used any more on the client.
         completion(GenericCredentialsError.noRefreshAvailable)
     }
 }
