@@ -35,9 +35,9 @@ public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertib
     public var httpRequestHeaders:[String:String] {
         var result = [String:String]()
         result[ServerConstants.XTokenTypeKey] = AuthTokenType.DropboxToken.rawValue
-        result[ServerConstants.HTTPOAuth2AccessTokenKey] = accessToken
+        result[ServerConstants.HTTPOAuth2AccessTokenKey] = savedCreds.accessToken
         result[ServerConstants.HTTPAccountIdKey] = savedCreds.userId
-        result[ServerConstants.httpRequestRefreshToken] = savedCreds.userId
+        result[ServerConstants.httpRequestRefreshToken] = savedCreds.refreshToken
         return result
     }
 
