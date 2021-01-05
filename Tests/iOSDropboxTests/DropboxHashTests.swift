@@ -36,4 +36,17 @@ class DropboxHashTests: XCTestCase {
         // print("hash: \(hash)")
         XCTAssert(knownCorrectHash == hash)
     }
+    
+    func testHashFromPngFile() throws {
+        guard let pngFile = Bundle.module.url(forResource: "Cat", withExtension: "png") else {
+            XCTFail()
+            return
+        }
+
+        let knownCorrectHash = "d8037620a8c3a506ec3b5b94353df15f24331c133eb7690434b11fa36205b209"
+                
+        let hash = try DropboxHashing.generateDropbox(fromLocalFile: pngFile)
+        //print("hash: \(hash)")
+        XCTAssert(knownCorrectHash == hash)
+    }
 }

@@ -35,7 +35,8 @@ let package = Package(
             dependencies: ["iOSDropbox"],
             resources: [
                 .copy("Cat.jpg"),
-                .copy("Cat.mov")
+                .copy("Cat.mov"),
+                .copy("Cat.png")
             ]
         ),
     ]

@@ -29,9 +29,16 @@ public class DropboxSyncServerSignIn : GenericSignIn {
         DropboxClientsManager.setupWithAppKey(appKey)
     }
     
-    private var savedCreds:DropboxSavedCreds? {
+    static var savedCreds:DropboxSavedCreds? {
         set {
-            Self.credentialsData.value = try? newValue?.toData()
+            let data = try? newValue?.toData()
+#if DEBUG
+            if let data = data {
+                let string = String(data: data, encoding: .utf8)
+                logger.debug("savedCreds: \(String(describing: string))")
+            }
+#endif
+            Self.credentialsData.value = data
         }
         
         get {
@@ -44,7 +51,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
     }
     
     public var credentials:GenericCredentials? {
-        if let savedCreds = savedCreds {
+        if let savedCreds = Self.savedCreds {
             return DropboxCredentials(savedCreds: savedCreds)
         }
         else {
@@ -84,7 +91,6 @@ public class DropboxSyncServerSignIn : GenericSignIn {
     }
     
     public func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-
         return DropboxClientsManager.handleRedirectURL(url) {[weak self] dropboxOAuthResult in
             guard let self = self else { return }
             guard let dropboxOAuthResult = dropboxOAuthResult else {
@@ -109,7 +115,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
                 }
                 
                 // It seems we have to save the access and refresh tokens in the keychain, redundantly with Dropbox. I can't see a way to access them.
-                self.getCurrentAccountInfo(accessToken: dropboxAccessToken.accessToken, refreshToken: refreshToken)
+                self.getCurrentAccountInfo(accessToken: dropboxAccessToken.accessToken, refreshToken: refreshToken, dropboxAccessToken: dropboxAccessToken)
                 
             case .cancel:
                 logger.info("Authorization flow was manually canceled by user!")
@@ -123,7 +129,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
         }
     }
 
-    private func getCurrentAccountInfo(accessToken: String, refreshToken: String) {
+    private func getCurrentAccountInfo(accessToken: String, refreshToken: String, dropboxAccessToken: DropboxAccessToken) {
         if let client = DropboxClientsManager.authorizedClient {
             client.users.getCurrentAccount().response {[unowned self] (response: Users.FullAccount?, error) in
                 
@@ -132,7 +138,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
                 // NOTE: This ^^^^ is *not* the same as the uid obtained when first signed in.
                 
                 if let usersFullAccount = response, error == nil {
-                    self.savedCreds = DropboxSavedCreds(cloudStorageType: .Dropbox, userId: usersFullAccount.accountId, username: usersFullAccount.name.displayName, uiDisplayName: usersFullAccount.name.displayName, email: usersFullAccount.email, accessToken: accessToken, refreshToken: refreshToken)
+                    Self.savedCreds = DropboxSavedCreds(cloudStorageType: .Dropbox, userId: usersFullAccount.accountId, username: usersFullAccount.name.displayName, uiDisplayName: usersFullAccount.name.displayName, email: usersFullAccount.email, accessToken: accessToken, refreshToken: refreshToken, dropboxAccessToken: dropboxAccessToken)
                     self.completeSignInProcess(autoSignIn: false)
                 } else {
                     // This stemmed from an explicit sign-in request.
@@ -176,7 +182,7 @@ public class DropboxSyncServerSignIn : GenericSignIn {
             // I don't think this actually revokes the access token. Just clears it locally. Yes. Looking at their code, it just clears the keychain.
             DropboxClientsManager.unlinkClients()
             
-            self.savedCreds = nil
+            Self.savedCreds = nil
             
             self.signInOutButton?.buttonShowing = .signIn
             
@@ -196,16 +202,10 @@ public class DropboxSyncServerSignIn : GenericSignIn {
             self.delegate?.signInCompleted(self, autoSignIn: autoSignIn)
         }
     }
-}
-
-extension DropboxSyncServerSignIn: DropboxButtonDelegate {
-    func signIn(_ button: DropboxSignInButton, vc: UIViewController?) {
-        delegate?.signInStarted(self)
-
-        // New: OAuth 2 code flow with PKCE that grants a short-lived token with scopes.
-        
+    
+    static var scopes:[String] {
         // See https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens
-        let scopes:[String] = [
+        return [
             "account_info.read",
             "files.metadata.read",
             "files.content.read",
@@ -217,6 +217,14 @@ extension DropboxSyncServerSignIn: DropboxButtonDelegate {
             // Needed for endpoint on server: https://www.dropbox.com/developers/documentation/http/documentation#file_requests-delete
             "file_requests.write"
         ]
+    }
+}
+
+extension DropboxSyncServerSignIn: DropboxButtonDelegate {
+    func signIn(_ button: DropboxSignInButton, vc: UIViewController?) {
+        delegate?.signInStarted(self)
+
+        // New: OAuth 2 code flow with PKCE that grants a short-lived token with scopes.
         
         var controller:UIViewController?
         if let vc = vc {
@@ -226,7 +234,7 @@ extension DropboxSyncServerSignIn: DropboxButtonDelegate {
             controller = UIViewController.getTop()
         }
         
-        let scopeRequest = ScopeRequest(scopeType: .user, scopes: scopes, includeGrantedScopes: false)
+        let scopeRequest = ScopeRequest(scopeType: .user, scopes: Self.scopes, includeGrantedScopes: false)
         DropboxClientsManager.authorizeFromControllerV2(
             UIApplication.shared,
             controller: controller,

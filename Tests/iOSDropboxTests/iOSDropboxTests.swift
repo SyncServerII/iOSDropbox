@@ -1,5 +1,6 @@
 import XCTest
 @testable import iOSDropbox
+import SwiftyDropbox
 
 class iOSDropboxTests: XCTestCase {
     func testDropboxIconURL() {
@@ -17,7 +18,7 @@ class iOSDropboxTests: XCTestCase {
     }
     
     func testDropboxSavedCreds() throws {
-        let creds = DropboxSavedCreds(cloudStorageType: .Dropbox, userId: "user", username: "username", uiDisplayName: "displayName", email: "email", accessToken: "token")
+        let creds = DropboxSavedCreds(cloudStorageType: .Dropbox, userId: "user", username: "username", uiDisplayName: "displayName", email: "email", accessToken: "token", refreshToken: "refresh", dropboxAccessToken: nil)
         let data = try creds.toData()
         let creds2 = try DropboxSavedCreds.fromData(data)
         XCTAssert(creds == creds2)

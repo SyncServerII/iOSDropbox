@@ -1,8 +1,16 @@
 import Foundation
 import iOSSignIn
 import ServerShared
+import SwiftyDropbox
+import iOSShared
 
 public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertible {
+    enum DropboxCredentialsError: Error {
+        case noCredentials
+        case noRefreshToken
+        case errorWhenRefreshing
+    }
+    
     var savedCreds:DropboxSavedCreds!
     var accessToken:String! {
         return savedCreds.accessToken
@@ -41,10 +49,35 @@ public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertib
         return result
     }
 
-    /// Dropbox doesn't have a creds refresh.
+    /// Calls the completion handler on the main queue. On a nil return self has been updated with new creds, as has DropboxSyncServerSignIn.
     public func refreshCredentials(completion: @escaping (Error?) ->()) {
-        // Dropbox access tokens live until the user revokes them, so no need to refresh. See https://www.dropboxforum.com/t5/API-support/API-v2-access-token-validity/td-p/215123
-        // 12/24/20; That's no longer true. But this method isn't used any more on the client.
-        completion(GenericCredentialsError.noRefreshAvailable)
+        guard let savedCreds = savedCreds,
+            let dropboxAccessToken = savedCreds.dropboxAccessToken else {
+            DispatchQueue.main.async {
+                completion(DropboxCredentialsError.noCredentials)
+            }
+            return
+        }
+        
+        DropboxOAuthManager.sharedOAuthManager.refreshAccessToken(dropboxAccessToken, scopes: DropboxSyncServerSignIn.scopes, queue: DispatchQueue.main) { result in
+            switch result {
+            case .success(let dropboxAccessToken):
+                guard let refreshToken = dropboxAccessToken.refreshToken else {
+                    completion(DropboxCredentialsError.noRefreshToken)
+                    return
+                }
+                
+                self.savedCreds = DropboxSavedCreds(creds: savedCreds, accessToken: dropboxAccessToken.accessToken, refreshToken: refreshToken, dropboxAccessToken: dropboxAccessToken)
+                DropboxSyncServerSignIn.savedCreds = self.savedCreds
+                completion(nil)
+                
+            case .error(let error, let errorString):
+                logger.error("\(error); \(String(describing: errorString))")
+                completion(DropboxCredentialsError.errorWhenRefreshing)
+                
+            default:
+                completion(DropboxCredentialsError.errorWhenRefreshing)
+            }
+        }
     }
 }

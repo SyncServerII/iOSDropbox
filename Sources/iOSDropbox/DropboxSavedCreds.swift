@@ -2,9 +2,13 @@ import PersistentValue
 import Foundation
 import iOSSignIn
 import ServerShared
+import SwiftyDropbox
 
 // Helper class
 public class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
+    // Redundant, but for convenience when refereshing access token. This is only optional for testing.
+    public let dropboxAccessToken: DropboxAccessToken?
+    
     public let cloudStorageType: CloudStorageType?
     
     public let userId: String // account_id in Dropbox terms
@@ -19,7 +23,7 @@ public class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
     
     public var refreshToken: String
     
-    public init(cloudStorageType: CloudStorageType, userId: String, username: String?, uiDisplayName: String?, email:String, accessToken: String, refreshToken: String) {
+    public init(cloudStorageType: CloudStorageType, userId: String, username: String?, uiDisplayName: String?, email:String, accessToken: String, refreshToken: String, dropboxAccessToken: DropboxAccessToken?) {
         self.userId = userId
         self.username = username
         self.uiDisplayName = uiDisplayName
@@ -27,6 +31,19 @@ public class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.cloudStorageType = cloudStorageType
+        self.dropboxAccessToken = dropboxAccessToken
+    }
+    
+    // Update tokens
+    init(creds: DropboxSavedCreds, accessToken: String, refreshToken: String, dropboxAccessToken: DropboxAccessToken) {
+            self.userId = creds.userId
+            self.username = creds.username
+            self.uiDisplayName = creds.uiDisplayName
+            self.email = creds.email
+            self.accessToken = accessToken
+            self.refreshToken = refreshToken
+            self.cloudStorageType = creds.cloudStorageType
+            self.dropboxAccessToken = dropboxAccessToken
     }
     
     // [1] Change to using PersistentValue .file to avoid issues with background launches.
