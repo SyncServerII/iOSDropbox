@@ -66,11 +66,21 @@ public class DropboxSyncServerSignIn : GenericSignIn {
 
         if userSignedIn {
             if let creds = credentials {
-                stickySignIn = true
-                delegate?.haveCredentials(self, credentials: creds)
-                
-                // Can only autoSignIn with Dropbox if we have creds. No way to refresh it seems.
-                autoSignIn()
+                creds.refreshCredentials { [weak self] error in
+                    guard let self = self else {
+                        return
+                    }
+                    
+                    if let error = error {
+                        logger.error("appLaunchSetup: \(error)")
+                        // I'm not going to sign the user out. This could just be a network error.
+                        return
+                    }
+
+                    self.stickySignIn = true
+                    self.delegate?.haveCredentials(self, credentials: creds)
+                    self.autoSignIn()
+                }
             }
             else {
                 // Doesn't seem much point in keeping the user with signed-in status if we don't have creds.
