@@ -49,34 +49,40 @@ public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertib
         return result
     }
 
+    func callCompletion(error:Error?, completion: @escaping (Error?) ->()) {
+        DispatchQueue.main.async {
+            completion(error)
+        }
+    }
+    
     /// Calls the completion handler on the main queue. On a nil return self has been updated with new creds, as has DropboxSyncServerSignIn.
     public func refreshCredentials(completion: @escaping (Error?) ->()) {
         guard let savedCreds = savedCreds,
             let dropboxAccessToken = savedCreds.dropboxAccessToken else {
-            DispatchQueue.main.async {
-                completion(DropboxCredentialsError.noCredentials)
-            }
+            callCompletion(error: DropboxCredentialsError.noCredentials, completion: completion)
             return
         }
         
-        DropboxOAuthManager.sharedOAuthManager.refreshAccessToken(dropboxAccessToken, scopes: DropboxSyncServerSignIn.scopes, queue: DispatchQueue.main) { result in
+        DropboxOAuthManager.sharedOAuthManager.refreshAccessToken(dropboxAccessToken, scopes: DropboxSyncServerSignIn.scopes, queue: DispatchQueue.main) { [weak self] result in
+            guard let self = self else { return }
+            
             switch result {
             case .success(let dropboxAccessToken):
                 guard let refreshToken = dropboxAccessToken.refreshToken else {
-                    completion(DropboxCredentialsError.noRefreshToken)
+                    self.callCompletion(error: DropboxCredentialsError.noRefreshToken, completion: completion)
                     return
                 }
                 
                 self.savedCreds = DropboxSavedCreds(creds: savedCreds, accessToken: dropboxAccessToken.accessToken, refreshToken: refreshToken, dropboxAccessToken: dropboxAccessToken)
                 DropboxSyncServerSignIn.savedCreds = self.savedCreds
-                completion(nil)
+                self.callCompletion(error: nil, completion: completion)
                 
             case .error(let error, let errorString):
                 logger.error("\(error); \(String(describing: errorString))")
-                completion(DropboxCredentialsError.errorWhenRefreshing)
+                self.callCompletion(error: DropboxCredentialsError.errorWhenRefreshing, completion: completion)
                 
             default:
-                completion(DropboxCredentialsError.errorWhenRefreshing)
+                self.callCompletion(error: DropboxCredentialsError.errorWhenRefreshing, completion: completion)
             }
         }
     }
