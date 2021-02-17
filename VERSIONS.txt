@@ -1,5 +1,8 @@
 iOSDropbox
 
+Version 0.1.0 (2/16/21)
+	Improve callbacks.
+
 Version 0.0.3 (1/27/21)
 	Update manifest.
 	
