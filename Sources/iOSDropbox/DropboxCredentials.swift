@@ -59,16 +59,21 @@ public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertib
     public func refreshCredentials(completion: @escaping (Error?) ->()) {
         guard let savedCreds = savedCreds,
             let dropboxAccessToken = savedCreds.dropboxAccessToken else {
+            logger.error("DropboxCredentialsError.noCredentials")
             callCompletion(error: DropboxCredentialsError.noCredentials, completion: completion)
             return
         }
         
         DropboxOAuthManager.sharedOAuthManager.refreshAccessToken(dropboxAccessToken, scopes: DropboxSyncServerSignIn.scopes, queue: DispatchQueue.main) { [weak self] result in
-            guard let self = self else { return }
+            guard let self = self else {
+                logger.error("DropboxCredentialsError: No self!")
+                return
+            }
             
             switch result {
             case .success(let dropboxAccessToken):
                 guard let refreshToken = dropboxAccessToken.refreshToken else {
+                    logger.error("DropboxCredentialsError.noRefreshToken")
                     self.callCompletion(error: DropboxCredentialsError.noRefreshToken, completion: completion)
                     return
                 }
@@ -82,6 +87,7 @@ public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertib
                 self.callCompletion(error: DropboxCredentialsError.errorWhenRefreshing, completion: completion)
                 
             default:
+                logger.error("DropboxCredentialsError.errorWhenRefreshing")
                 self.callCompletion(error: DropboxCredentialsError.errorWhenRefreshing, completion: completion)
             }
         }

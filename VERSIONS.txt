@@ -1,5 +1,8 @@
 iOSDropbox
 
+Version 0.1.1 (4/26/21)
+	Improve error logging on refresh call.
+    
 Version 0.1.0 (2/16/21)
 	Improve callbacks.
 
