@@ -17,7 +17,7 @@ public class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
     
     public var uiDisplayName: String?
     
-    public let email:String
+    public let emailAddress:String!
     
     public var accessToken: String
     
@@ -27,7 +27,7 @@ public class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
         self.userId = userId
         self.username = username
         self.uiDisplayName = uiDisplayName
-        self.email = email
+        self.emailAddress = email
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.cloudStorageType = cloudStorageType
@@ -39,7 +39,7 @@ public class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
             self.userId = creds.userId
             self.username = creds.username
             self.uiDisplayName = creds.uiDisplayName
-            self.email = creds.email
+            self.emailAddress = creds.emailAddress
             self.accessToken = accessToken
             self.refreshToken = refreshToken
             self.cloudStorageType = creds.cloudStorageType
@@ -53,7 +53,7 @@ public class DropboxSavedCreds : GenericCredentialsCodable, Equatable {
         return lhs.userId == rhs.userId &&
             lhs.username == rhs.username &&
             lhs.uiDisplayName == rhs.uiDisplayName &&
-            lhs.email == rhs.email &&
+            lhs.emailAddress == rhs.emailAddress &&
             lhs.accessToken == rhs.accessToken &&
             lhs.refreshToken == rhs.refreshToken
     }

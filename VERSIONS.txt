@@ -1,5 +1,8 @@
 iOSDropbox
 
+Version 0.2.0 (6/26/21)
+	Add email address to credentials.
+    
 Version 0.1.1 (4/26/21)
 	Improve error logging on refresh call.
     

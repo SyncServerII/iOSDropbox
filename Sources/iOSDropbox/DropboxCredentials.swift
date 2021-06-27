@@ -21,6 +21,10 @@ public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertib
         self.savedCreds = savedCreds
     }
     
+    public var emailAddress: String! {
+        return savedCreds.emailAddress
+    }
+    
     /// A unique identifier for the user. For Dropbox this is their account_id.
     public var userId:String {
         return savedCreds.userId
@@ -33,7 +37,7 @@ public class DropboxCredentials : GenericCredentials, CustomDebugStringConvertib
 
     /// A name suitable for identifying the user via the UI. If available this should be the users email. Otherwise, it could be the same as the username.
     public var uiDisplayName:String? {
-        return savedCreds.email
+        return savedCreds.emailAddress
     }
     
     public var debugDescription: String {
